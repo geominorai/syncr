@@ -106,7 +106,7 @@ public void OnClientDisconnect(int iClient) {
 
 public void OnEntityCreated(int iEntity, const char[] sClassName) {
 	if(g_hCVEnabled.BoolValue) {
-		if (StrEqual(sClassName,"tf_projectile_rocket")) {
+		if (StrEqual(sClassName,"tf_projectile_rocket") || StrEqual(sClassName,"tf_projectile_energy_ball")) {
 			SDKHook(iEntity, SDKHook_Spawn, SDKHookCB_OnRocketSpawn);
 		} else if (g_hCVRave.BoolValue && StrContains(sClassName,"tf_projectile") == 0) {
 			// sClassName starts with "tf_projectile", i.e. rockets, pipes, stickies, arrows, syringe, bolts
