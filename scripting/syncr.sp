@@ -8,11 +8,6 @@
 
 #define PLUGIN_VERSION "0.8.8"
 
-#undef REQUIRE_PLUGIN
-#include <updater>
-
-#define UPDATE_URL    "http://www.tf2jump.com/plugins/syncr/updatefile.txt"
-
 #define MAX_ROCKETS 20 // Why would you ever want to sync with anywhere near this?
 
 #define OBSMODE_FP 4
@@ -117,16 +112,6 @@ public OnPluginStart() {
   AutoExecConfig(true, "syncr");
   
   LoadTranslations("common.phrases");
-  
-  if (LibraryExists("updater")) {
-    Updater_AddPlugin(UPDATE_URL);
-  }
-}
-
-public OnLibraryAdded(const String:sName[]) {
-  if (StrEqual(sName, "updater")) {
-    Updater_AddPlugin(UPDATE_URL);
-  }
 }
 
 public OnConfigsExecuted() {
