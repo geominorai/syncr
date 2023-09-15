@@ -246,7 +246,7 @@ public Action Timer_Refresh(Handle hTimer) {
 						vecAngles[2] = GetRandomFloat()*360;
 					}
 
-					TR_TraceRayFilter(vecOrigin, vecAngles, MASK_SHOT_HULL, RayType_Infinite, TraceEntityFilter_Environment);
+					TR_TraceRayFilter(vecOrigin, vecAngles, MASK_SHOT_HULL, RayType_Infinite, TraceEntityFilter_Environment, iEntIdx);
 					if(TR_DidHit() && IsValidEntity(TR_GetEntityIndex())) {
 						TR_GetEndPosition(vecTargetPoint);
 					} else {
@@ -520,8 +520,8 @@ public Action Timer_Refresh(Handle hTimer) {
 	return Plugin_Continue;
 }
 
-public bool TraceEntityFilter_Environment(int iEntity, int iMask, any aData) {
-	return false;
+public bool TraceEntityFilter_Environment(int iEntity, int iMask, int iSelfEntity) {
+	return iEntity > MaxClients && iEntity != iSelfEntity;
 }
 
 // Commands
