@@ -8,15 +8,16 @@
 #include <tf2>
 #include <tf2_stocks>
 
-#define PLUGIN_VERSION "0.9.0"
+#define PLUGIN_VERSION "0.9.1"
 
-#define MAX_ROCKETS 20
+#define MAX_ROCKETS				20
 
-#define MAX_FLOAT_ARBITRARY 100000.0
-#define TR_VERIFY_SECTIONS 10
-#define DIST_BAR_MAX 30
-#define DIST_BAR_RES 10
-#define DIST_BAR_WIDTH 35
+#define POSITIVE_INFINITY		view_as<float>(0x7F800000)
+
+#define TR_VERIFY_SECTIONS		10
+#define DIST_BAR_MAX			30
+#define DIST_BAR_RES			10
+#define DIST_BAR_WIDTH			35
 
 enum struct Rocketeer {
 	bool bActivated;
@@ -222,7 +223,7 @@ public Action Timer_Refresh(Handle hTimer) {
 			}
 
 			int iRingColor[4] = {255, 255, 255, 255}; // White
-			float fClosetDistance = MAX_FLOAT_ARBITRARY;
+			float fClosetDistance = POSITIVE_INFINITY;
 
 			char sRocketInfo[254] = "\0";
 			float vecVel[3];
@@ -345,7 +346,6 @@ public Action Timer_Refresh(Handle hTimer) {
 			vecTracePointPrev = vecProbePoint;
 
 			float vecNormal[3];
-			float vecNormalAngles[3];
 
 			for (int k=0; k<5; k++) {
 				TR_TraceRayFilter(vecProbePoint, vecAngles, MASK_SHOT_HULL, RayType_Infinite, TraceEntityFilter_Environment);
@@ -357,6 +357,7 @@ public Action Timer_Refresh(Handle hTimer) {
 
 				float fDist = vecGroundPoint[2] - vecProbePoint[2];
 				if (FloatAbs(fDist) < 10) {
+					TR_GetPlaneNormal(null, vecNormal);
 					break;
 				}
 
@@ -399,15 +400,7 @@ public Action Timer_Refresh(Handle hTimer) {
 
 					if (GetVectorDistance(vecTracePointPrev, vecTemp) <= fTraceDist) {
 						vecGroundPoint = vecTemp;
-
 						TR_GetPlaneNormal(null, vecNormal);
-						GetVectorAngles(vecNormal, vecNormalAngles);
-
-						vecTemp[0] += vecNormal[0] * 50;
-						vecTemp[1] += vecNormal[1] * 50;
-						vecTemp[2] += vecNormal[2] * 50;
-
-						GetVectorAngles(vecNormal, vecNormalAngles);
 
 						break;
 					}
@@ -457,30 +450,34 @@ public Action Timer_Refresh(Handle hTimer) {
 			}
 
 			// Ignore vertical
-			if (FloatAbs(270.0-vecNormalAngles[0]) > 10) {
+			if (vecNormal[2] <= 0.0) {
 				continue;
 			}
 
 			if (g_hCVRing.BoolValue) {
 				// Distance from client to currently predicted landing point
 				float fDistImpactPoint = GetVectorDistance(vecClientOrigin, vecGroundPoint);
-				//if (FloatAbs(fClientVelocity[2] + 550) < g_hCVThreshold.FloatValue) {
 				if (fDistImpactPoint < g_hCVThreshold.FloatValue) {
 					iRingColor = {0, 0, 255, 255}; // Blue
 				}
 
-				if (vecClientEyeAngles[0] > 45.0 && fClosetDistance != MAX_FLOAT_ARBITRARY || fDistImpactPoint > 30) {
-					vecGroundPoint[2] += 10.0;
-
+				if (vecClientEyeAngles[0] > 45.0 && fClosetDistance != POSITIVE_INFINITY || fDistImpactPoint > 30) {
 					float fMultiplier = Math_Min(1.0, FloatAbs(fDistImpactPoint)/1000.0);
 					float fDeg0 = FLOAT_PI/3;
+
+					// Move ring slightly above ground to avoid clipping
+					float vecNormalOffset[3];
+					vecNormalOffset = vecNormal;
+					ScaleVector(vecNormalOffset, 5.0);
+					AddVectors(vecNormalOffset, vecGroundPoint, vecGroundPoint);
 
 					float vecRingPoint[3];
 					float vecRingPointPrev[3];
 
+					// Solve for z-coordinate using the general equation of a plane
 					vecRingPointPrev[0] = vecGroundPoint[0] + Cosine(0.0)*g_hCVThreshold.FloatValue*fMultiplier;
 					vecRingPointPrev[1] = vecGroundPoint[1] + Sine(0.0)*g_hCVThreshold.FloatValue*fMultiplier;
-					vecRingPointPrev[2] = vecGroundPoint[2];
+					vecRingPointPrev[2] = ((vecGroundPoint[0]-vecRingPointPrev[0])*vecNormal[0] + (vecGroundPoint[1]-vecRingPointPrev[1])*vecNormal[1] + vecGroundPoint[2]*vecNormal[2]) / vecNormal[2];
 
 					float vecExpand[3];
 					float vecPointA[3];
@@ -489,7 +486,7 @@ public Action Timer_Refresh(Handle hTimer) {
 					for (float fDeg=fDeg0; fDeg<2*FLOAT_PI; fDeg+=fDeg0) {
 						vecRingPoint[0] = vecGroundPoint[0] + Cosine(fDeg)*g_hCVThreshold.FloatValue*fMultiplier;
 						vecRingPoint[1] = vecGroundPoint[1] + Sine(fDeg)*g_hCVThreshold.FloatValue*fMultiplier;
-						vecRingPoint[2] = vecGroundPoint[2];
+						vecRingPoint[2] = ((vecGroundPoint[0]-vecRingPoint[0])*vecNormal[0] + (vecGroundPoint[1]-vecRingPoint[1])*vecNormal[1] + vecGroundPoint[2]*vecNormal[2]) / vecNormal[2];
 
 						SubtractVectors(vecRingPoint, vecRingPointPrev, vecExpand);
 						ScaleVector(vecExpand, 0.5*1.08);
